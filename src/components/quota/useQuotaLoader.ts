@@ -10,8 +10,7 @@ import { getStatusFromError } from '@/utils/quota';
 import type { QuotaConfig } from './quotaConfigs';
 
 type QuotaScope = 'page' | 'all';
-
-const MAX_CONCURRENT_REQUESTS = 8;
+const DEFAULT_MAX_CONCURRENT_REQUESTS = 4;
 
 type QuotaUpdater<T> = T | ((prev: T) => T);
 
@@ -39,7 +38,8 @@ export function useQuotaLoader<TState, TData>(config: QuotaConfig<TState, TData>
     async (
       targets: AuthFileItem[],
       scope: QuotaScope,
-      setLoading: (loading: boolean, scope?: QuotaScope | null) => void
+      setLoading: (loading: boolean, scope?: QuotaScope | null) => void,
+      refreshConcurrency?: number
     ) => {
       if (loadingRef.current) return;
       loadingRef.current = true;
@@ -58,7 +58,8 @@ export function useQuotaLoader<TState, TData>(config: QuotaConfig<TState, TData>
         });
 
         const results: LoadQuotaResult<TData>[] = new Array(targets.length);
-        const concurrentLimit = Math.max(1, Math.min(MAX_CONCURRENT_REQUESTS, targets.length));
+        const configuredConcurrency = refreshConcurrency ?? config.refreshConcurrency ?? DEFAULT_MAX_CONCURRENT_REQUESTS;
+        const concurrentLimit = Math.max(1, Math.min(configuredConcurrency, targets.length));
         let nextIndex = 0;
 
         const worker = async () => {

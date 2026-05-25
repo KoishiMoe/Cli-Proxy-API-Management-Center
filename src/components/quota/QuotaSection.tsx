@@ -9,7 +9,15 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
-import type { AuthFileItem, ResolvedTheme } from '@/types';
+import type {
+  AntigravityQuotaState,
+  AuthFileItem,
+  ClaudeQuotaState,
+  CodexQuotaState,
+  GeminiCliQuotaState,
+  KimiQuotaState,
+  ResolvedTheme,
+} from '@/types';
 import { getStatusFromError } from '@/utils/quota';
 import { QuotaCard } from './QuotaCard';
 import type { QuotaStatusState } from './QuotaCard';
@@ -26,6 +34,118 @@ type QuotaSetter<T> = (updater: QuotaUpdater<T>) => void;
 type ViewMode = 'paged' | 'all';
 
 const MAX_ITEMS_PER_PAGE = 25;
+const quotaNumberFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 0,
+});
+
+const formatWholeNumber = (value: number): string => quotaNumberFormatter.format(Math.round(value));
+
+const formatPercentSummary = (value: number): string => `${formatWholeNumber(value)}%`;
+
+const sumPositive = (values: Array<number | null | undefined>): number => {
+  let total = 0;
+
+  for (const value of values) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+    total += Math.max(0, value);
+  }
+
+  return total;
+};
+
+const buildQuotaSummary = <TState extends QuotaStatusState>(
+  type: QuotaConfig<TState, unknown>['type'],
+  quotaEntries: Record<string, TState>
+): string | null => {
+  switch (type) {
+    case 'antigravity': {
+      const groups = Object.values(quotaEntries as unknown as Record<string, AntigravityQuotaState>)
+        .filter((entry) => entry.status === 'success')
+        .flatMap((entry) => entry.groups ?? []);
+
+      if (groups.length === 0) return null;
+
+      const remainingPercentTotal = sumPositive(
+        groups.map((group) => Math.max(0, Math.min(1, group.remainingFraction)) * 100)
+      );
+      return formatPercentSummary(remainingPercentTotal);
+    }
+    case 'claude': {
+      const windows = Object.values(quotaEntries as unknown as Record<string, ClaudeQuotaState>)
+        .filter((entry) => entry.status === 'success')
+        .flatMap((entry) => entry.windows ?? []);
+
+      if (windows.length === 0) return null;
+
+      const remainingPercentTotal = sumPositive(
+        windows.map((window) => {
+          const usedPercent = window.usedPercent;
+          if (usedPercent === null || usedPercent === undefined) return 0;
+          return Math.max(0, 100 - Math.min(100, usedPercent));
+        })
+      );
+      return formatPercentSummary(remainingPercentTotal);
+    }
+    case 'codex': {
+      const windows = Object.values(quotaEntries as unknown as Record<string, CodexQuotaState>)
+        .filter((entry) => entry.status === 'success')
+        .flatMap((entry) => entry.windows ?? []);
+
+      if (windows.length === 0) return null;
+
+      const remainingPercentTotal = sumPositive(
+        windows.map((window) => {
+          const usedPercent = window.usedPercent;
+          if (usedPercent === null || usedPercent === undefined) return 0;
+          return Math.max(0, 100 - Math.min(100, usedPercent));
+        })
+      );
+      return formatPercentSummary(remainingPercentTotal);
+    }
+    case 'gemini-cli': {
+      const buckets = Object.values(quotaEntries as unknown as Record<string, GeminiCliQuotaState>)
+        .filter((entry) => entry.status === 'success')
+        .flatMap((entry) => entry.buckets ?? []);
+
+      if (buckets.length === 0) return null;
+
+      const hasAbsoluteAmount = buckets.every(
+        (bucket) => bucket.remainingAmount !== null && bucket.remainingAmount !== undefined
+      );
+
+      if (hasAbsoluteAmount) {
+        const totalAmount = sumPositive(buckets.map((bucket) => bucket.remainingAmount));
+        return formatWholeNumber(totalAmount);
+      }
+
+      const remainingPercentTotal = sumPositive(
+        buckets.map((bucket) => {
+          const fraction = bucket.remainingFraction;
+          if (fraction === null || fraction === undefined) return 0;
+          return Math.max(0, Math.min(1, fraction)) * 100;
+        })
+      );
+      return formatPercentSummary(remainingPercentTotal);
+    }
+    case 'kimi': {
+      const rows = Object.values(quotaEntries as unknown as Record<string, KimiQuotaState>)
+        .filter((entry) => entry.status === 'success')
+        .flatMap((entry) => entry.rows ?? []);
+
+      if (rows.length === 0) return null;
+
+      const remainingTotal = sumPositive(
+        rows.map((row) => {
+          if (row.limit <= 0) return row.used > 0 ? 0 : row.limit;
+          return row.limit - row.used;
+        })
+      );
+      return formatWholeNumber(remainingTotal);
+    }
+    default:
+      return null;
+  }
+};
 
 interface QuotaPaginationState<T> {
   pageSize: number;
@@ -95,13 +215,15 @@ interface QuotaSectionProps<TState extends QuotaStatusState, TData> {
   files: AuthFileItem[];
   loading: boolean;
   disabled: boolean;
+  refreshConcurrency?: number;
 }
 
 export function QuotaSection<TState extends QuotaStatusState, TData>({
   config,
   files,
   loading,
-  disabled
+  disabled,
+  refreshConcurrency
 }: QuotaSectionProps<TState, TData>) {
   const { t } = useTranslation();
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
@@ -164,8 +286,8 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     const scope = effectiveViewMode === 'all' ? 'all' : 'page';
     const targets = effectiveViewMode === 'all' ? filteredFiles : pageItems;
     if (targets.length === 0) return;
-    loadQuota(targets, scope, setLoading);
-  }, [loading, effectiveViewMode, filteredFiles, pageItems, loadQuota, setLoading]);
+    loadQuota(targets, scope, setLoading, refreshConcurrency);
+  }, [loading, effectiveViewMode, filteredFiles, pageItems, loadQuota, setLoading, refreshConcurrency]);
 
   useEffect(() => {
     if (loading) return;
@@ -230,6 +352,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   );
 
   const isRefreshing = sectionLoading || loading;
+  const quotaSummary = useMemo(() => buildQuotaSummary(config.type, quota), [config.type, quota]);
 
   return (
     <Card
@@ -281,6 +404,14 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
         />
       ) : (
         <>
+          {quotaSummary !== null && (
+            <div className={styles.quotaSummary}>
+              <span className={styles.quotaSummaryLabel}>
+                {t('quota_management.remaining_total')}
+              </span>
+              <span className={styles.quotaSummaryValue}>{quotaSummary}</span>
+            </div>
+          )}
           <div ref={gridRef} className={config.gridClassName}>
             {pageItems.map((item) => (
               <QuotaCard

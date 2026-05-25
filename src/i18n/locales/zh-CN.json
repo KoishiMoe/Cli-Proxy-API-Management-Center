@@ -1373,6 +1373,9 @@
     "refresh_files_and_quota": "刷新认证文件&额度",
     "refresh_all_credentials": "刷新全部凭证",
     "refresh_single_quota": "刷新该账户额度",
+    "remaining_total": "总剩余额度",
+    "refresh_concurrency_label": "刷新并发数",
+    "refresh_concurrency_hint": "仅保存在当前浏览器中，范围 {{min}}-{{max}}。",
     "card_idle_hint": "请使用顶部“刷新全部凭证”按钮获取最新额度。"
   },
   "system_info": {

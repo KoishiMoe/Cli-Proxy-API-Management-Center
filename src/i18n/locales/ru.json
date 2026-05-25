@@ -1372,6 +1372,9 @@
     "refresh_files_and_quota": "Обновить файлы и квоты",
     "refresh_all_credentials": "Обновить все учётные данные",
     "refresh_single_quota": "Обновить эту квоту",
+    "remaining_total": "Общий остаток",
+    "refresh_concurrency_label": "Параллельность обновления",
+    "refresh_concurrency_hint": "Сохраняется только в этом браузере. Диапазон {{min}}-{{max}}.",
     "card_idle_hint": "Используйте кнопку «Обновить все учётные данные» сверху, чтобы загрузить актуальные данные по квотам."
   },
   "system_info": {

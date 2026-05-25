@@ -13,6 +13,38 @@
   gap: $spacing-sm;
 }
 
+.pageHeaderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  flex-wrap: wrap;
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.pageHeaderCopy {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-width: 0;
+}
+
+.pageHeaderSettings {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  @include mobile {
+    width: 100%;
+    justify-content: stretch;
+  }
+}
+
 .pageTitle {
   font-size: 28px;
   font-weight: 700;
@@ -78,6 +110,48 @@
   border-radius: $radius-md;
   color: var(--danger-color);
   font-size: 14px;
+}
+
+.settingField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+
+  @include mobile {
+    width: 100%;
+    min-width: 0;
+  }
+
+  label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+.settingInput {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: text;
+  height: 38px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+}
+
+.settingHint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
 }
 
 .pageSizeSelect {
@@ -283,6 +357,30 @@
   padding-top: $spacing-sm;
   margin-top: $spacing-xs;
   border-top: 1px dashed var(--border-color);
+}
+
+.quotaSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 18%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 7%, var(--bg-secondary));
+}
+
+.quotaSummaryLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.quotaSummaryValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .quotaRow {
