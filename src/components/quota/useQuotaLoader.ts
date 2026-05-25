@@ -11,6 +11,8 @@ import type { QuotaConfig } from './quotaConfigs';
 
 type QuotaScope = 'page' | 'all';
 
+const MAX_CONCURRENT_REQUESTS = 8;
+
 type QuotaUpdater<T> = T | ((prev: T) => T);
 
 type QuotaSetter<T> = (updater: QuotaUpdater<T>) => void;
@@ -55,18 +57,30 @@ export function useQuotaLoader<TState, TData>(config: QuotaConfig<TState, TData>
           return nextState;
         });
 
-        const results = await Promise.all(
-          targets.map(async (file): Promise<LoadQuotaResult<TData>> => {
+        const results: LoadQuotaResult<TData>[] = new Array(targets.length);
+        const concurrentLimit = Math.max(1, Math.min(MAX_CONCURRENT_REQUESTS, targets.length));
+        let nextIndex = 0;
+
+        const worker = async () => {
+          while (true) {
+            const currentIndex = nextIndex;
+            nextIndex += 1;
+
+            if (currentIndex >= targets.length) return;
+
+            const file = targets[currentIndex];
             try {
               const data = await config.fetchQuota(file, t);
-              return { name: file.name, status: 'success', data };
+              results[currentIndex] = { name: file.name, status: 'success', data };
             } catch (err: unknown) {
               const message = err instanceof Error ? err.message : t('common.unknown_error');
               const errorStatus = getStatusFromError(err);
-              return { name: file.name, status: 'error', error: message, errorStatus };
+              results[currentIndex] = { name: file.name, status: 'error', error: message, errorStatus };
             }
-          })
-        );
+          }
+        };
+
+        await Promise.all(Array.from({ length: concurrentLimit }, () => worker()));
 
         if (requestId !== requestIdRef.current) return;
 

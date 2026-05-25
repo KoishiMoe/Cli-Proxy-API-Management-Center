@@ -1398,6 +1398,7 @@
     "refresh_files": "重新整理驗證檔案",
     "refresh_files_and_quota": "重新整理驗證檔案&配額",
     "refresh_all_credentials": "重新整理全部憑證",
+    "refresh_single_quota": "重新整理此帳戶配額",
     "card_idle_hint": "請使用頂部「重新整理全部憑證」按鈕取得最新配額。"
   },
   "system_info": {

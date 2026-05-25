@@ -610,9 +610,19 @@
 
 .cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: $spacing-sm;
   min-height: 28px;
+}
+
+.cardHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
 }
 
 .typeBadge {
@@ -630,6 +640,18 @@
   color: var(--text-primary);
   word-break: break-all;
   line-height: 1.4;
+}
+
+.cardRefreshButton:global(.btn.btn-sm) {
+  padding-inline: 12px;
+  flex-shrink: 0;
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
 }
 
 .pagination {
