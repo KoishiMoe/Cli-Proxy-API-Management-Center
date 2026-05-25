@@ -133,16 +133,61 @@ const getApisRecord = (usageData: unknown): Record<string, unknown> | null => {
   return isRecord(apisRaw) ? apisRaw : null;
 };
 
-const normalizeUsageThinking = (value: unknown): UsageThinking | null => {
-  if (!isRecord(value)) {
-    return null;
+const firstText = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
   }
+  return '';
+};
 
-  const intensity = typeof value.intensity === 'string' ? value.intensity.trim() : '';
-  const mode = typeof value.mode === 'string' ? value.mode.trim() : '';
-  const level = typeof value.level === 'string' ? value.level.trim() : '';
-  const budget =
-    typeof value.budget === 'number' && Number.isFinite(value.budget) ? value.budget : undefined;
+const firstFiniteNumber = (...values: unknown[]): number | undefined => {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return undefined;
+};
+
+const normalizeUsageThinking = (
+  value: unknown,
+  detailRaw?: Record<string, unknown>
+): UsageThinking | null => {
+  const thinking: Record<string, unknown> = isRecord(value) ? value : {};
+  const detail: Record<string, unknown> = detailRaw ?? {};
+
+  const intensity = firstText(
+    thinking.intensity,
+    thinking.thinking_intensity,
+    thinking.thinkingIntensity,
+    detail.thinking_intensity,
+    detail.thinkingIntensity
+  );
+  const mode = firstText(
+    thinking.mode,
+    thinking.thinking_mode,
+    thinking.thinkingMode,
+    detail.thinking_mode,
+    detail.thinkingMode
+  );
+  const level = firstText(
+    thinking.level,
+    thinking.thinking_level,
+    thinking.thinkingLevel,
+    thinking.reasoning_effort,
+    thinking.reasoningEffort,
+    detail.thinking_level,
+    detail.thinkingLevel,
+    detail.reasoning_effort,
+    detail.reasoningEffort
+  );
+  const budget = firstFiniteNumber(
+    thinking.budget,
+    thinking.thinking_budget,
+    thinking.thinkingBudget,
+    detail.thinking_budget,
+    detail.thinkingBudget
+  );
 
   if (!intensity && !mode && !level && budget === undefined) {
     return null;
@@ -591,7 +636,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
             null) as UsageDetail['auth_index'],
           latency_ms: latencyMs ?? undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
-          thinking: normalizeUsageThinking(detailRaw.thinking),
+          thinking: normalizeUsageThinking(detailRaw.thinking, detailRaw),
           failed: detailRaw.failed === true,
           __modelName: modelName,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
@@ -668,7 +713,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
             null) as UsageDetail['auth_index'],
           latency_ms: latencyMs ?? undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
-          thinking: normalizeUsageThinking(detailRaw.thinking),
+          thinking: normalizeUsageThinking(detailRaw.thinking, detailRaw),
           failed: detailRaw.failed === true,
           __modelName: modelName,
           __endpoint: endpoint,
