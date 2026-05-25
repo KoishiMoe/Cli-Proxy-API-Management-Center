@@ -35,6 +35,9 @@ export interface KeyStats {
 }
 
 export interface TokenBreakdown {
+  inputTokens: number;
+  inputCachedTokens: number;
+  outputTokens: number;
   cachedTokens: number;
   reasoningTokens: number;
 }
@@ -717,15 +720,30 @@ export function calculateLatencyStats(usageData: unknown): LatencyStats {
 export function calculateTokenBreakdown(usageData: unknown): TokenBreakdown {
   const details = collectUsageDetails(usageData);
   if (!details.length) {
-    return { cachedTokens: 0, reasoningTokens: 0 };
+    return {
+      inputTokens: 0,
+      inputCachedTokens: 0,
+      outputTokens: 0,
+      cachedTokens: 0,
+      reasoningTokens: 0,
+    };
   }
 
+  let inputTokens = 0;
+  let inputCachedTokens = 0;
+  let outputTokens = 0;
   let cachedTokens = 0;
   let reasoningTokens = 0;
 
   details.forEach((detail) => {
     const tokens = detail.tokens;
+    inputTokens += Math.max(typeof tokens.input_tokens === 'number' ? tokens.input_tokens : 0, 0);
+    outputTokens += Math.max(typeof tokens.output_tokens === 'number' ? tokens.output_tokens : 0, 0);
     cachedTokens += Math.max(
+      typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
+      typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
+    );
+    inputCachedTokens += Math.max(
       typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
       typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
     );
@@ -734,7 +752,13 @@ export function calculateTokenBreakdown(usageData: unknown): TokenBreakdown {
     }
   });
 
-  return { cachedTokens, reasoningTokens };
+  return {
+    inputTokens,
+    inputCachedTokens,
+    outputTokens,
+    cachedTokens,
+    reasoningTokens,
+  };
 }
 
 /**

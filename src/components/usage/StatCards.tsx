@@ -62,7 +62,13 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
 
   const { tokenBreakdown, rateStats, totalCost, latencyStats } = useMemo(() => {
     const empty = {
-      tokenBreakdown: { cachedTokens: 0, reasoningTokens: 0 },
+      tokenBreakdown: {
+        inputTokens: 0,
+        inputCachedTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        reasoningTokens: 0,
+      },
       rateStats: { rpm: 0, tpm: 0, windowMinutes: 30, requestCount: 0, tokenCount: 0 },
       totalCost: 0,
       latencyStats: {
@@ -79,6 +85,9 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
     const latencyStats = calculateLatencyStatsFromDetails(details);
 
     let cachedTokens = 0;
+    let inputTokens = 0;
+    let inputCachedTokens = 0;
+    let outputTokens = 0;
     let reasoningTokens = 0;
     let totalCost = 0;
 
@@ -91,7 +100,13 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
 
     details.forEach((detail) => {
       const tokens = detail.tokens;
+      inputTokens += Math.max(typeof tokens.input_tokens === 'number' ? tokens.input_tokens : 0, 0);
+      outputTokens += Math.max(typeof tokens.output_tokens === 'number' ? tokens.output_tokens : 0, 0);
       cachedTokens += Math.max(
+        typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
+        typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
+      );
+      inputCachedTokens += Math.max(
         typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
         typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
       );
@@ -117,7 +132,13 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
 
     const denominator = windowMinutes > 0 ? windowMinutes : 1;
     return {
-      tokenBreakdown: { cachedTokens, reasoningTokens },
+      tokenBreakdown: {
+        inputTokens,
+        inputCachedTokens,
+        outputTokens,
+        cachedTokens,
+        reasoningTokens,
+      },
       rateStats: {
         rpm: requestCount / denominator,
         tpm: tokenCount / denominator,
@@ -129,6 +150,25 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
       latencyStats,
     };
   }, [hasPrices, modelPrices, nowMs, usage]);
+
+  const tokenBreakdownItems = [
+    {
+      label: t('usage_stats.input_tokens'),
+      value: loading ? '-' : formatCompactNumber(tokenBreakdown.inputTokens),
+    },
+    {
+      label: t('usage_stats.input_cached_tokens'),
+      value: loading ? '-' : formatCompactNumber(tokenBreakdown.inputCachedTokens),
+    },
+    {
+      label: t('usage_stats.output_tokens'),
+      value: loading ? '-' : formatCompactNumber(tokenBreakdown.outputTokens),
+    },
+    {
+      label: t('usage_stats.reasoning_tokens'),
+      value: loading ? '-' : formatCompactNumber(tokenBreakdown.reasoningTokens),
+    },
+  ];
 
   const statsCards: StatCardData[] = [
     {
@@ -168,16 +208,13 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
       accentBorder: 'rgba(139, 92, 246, 0.35)',
       value: loading ? '-' : formatCompactNumber(usage?.total_tokens ?? 0),
       meta: (
-        <>
-          <span className={styles.statMetaItem}>
-            {t('usage_stats.cached_tokens')}:{' '}
-            {loading ? '-' : formatCompactNumber(tokenBreakdown.cachedTokens)}
-          </span>
-          <span className={styles.statMetaItem}>
-            {t('usage_stats.reasoning_tokens')}:{' '}
-            {loading ? '-' : formatCompactNumber(tokenBreakdown.reasoningTokens)}
-          </span>
-        </>
+        <div className={styles.statMetaGrid}>
+          {tokenBreakdownItems.map((item) => (
+            <span key={item.label} className={styles.statMetaItem}>
+              {item.label}: {item.value}
+            </span>
+          ))}
+        </div>
       ),
       trend: sparklines.tokens,
     },

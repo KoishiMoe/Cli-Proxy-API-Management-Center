@@ -272,6 +272,16 @@
   font-size: 12px;
 }
 
+.statMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
 .statSuccess {
   color: var(--success-color);
 }
