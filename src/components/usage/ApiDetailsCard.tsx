@@ -103,16 +103,36 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                           <span className={styles.apiBadge}>
                             <span className={styles.requestCountCell}>
                               <span>
-                                {t('usage_stats.requests_count')}: {api.totalRequests.toLocaleString()}
+                                {t('usage_stats.requests_count')}:{' '}
+                                {api.totalRequests.toLocaleString()}
                               </span>
                               <span className={styles.requestBreakdown}>
-                                (<span className={styles.statSuccess}>{api.successCount.toLocaleString()}</span>{' '}
-                                <span className={styles.statFailure}>{api.failureCount.toLocaleString()}</span>)
+                                (
+                                <span className={styles.statSuccess}>
+                                  {api.successCount.toLocaleString()}
+                                </span>{' '}
+                                <span className={styles.statFailure}>
+                                  {api.failureCount.toLocaleString()}
+                                </span>
+                                )
                               </span>
                             </span>
                           </span>
                           <span className={styles.apiBadge}>
                             {t('usage_stats.tokens_count')}: {formatCompactNumber(api.totalTokens)}
+                          </span>
+                          <span className={styles.apiBadge}>
+                            {t('usage_stats.input_tokens')}: {formatCompactNumber(api.inputTokens)}
+                          </span>
+                          <span className={styles.apiBadge}>
+                            {t('usage_stats.cached_tokens')}: {formatCompactNumber(api.cachedTokens)}
+                          </span>
+                          <span className={styles.apiBadge}>
+                            {t('usage_stats.output_tokens')}: {formatCompactNumber(api.outputTokens)}
+                          </span>
+                          <span className={styles.apiBadge}>
+                            {t('usage_stats.reasoning_tokens')}:{' '}
+                            {formatCompactNumber(api.reasoningTokens)}
                           </span>
                           {hasPrices && api.totalCost > 0 && (
                             <span className={styles.apiBadge}>
@@ -127,6 +147,17 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                     </button>
                     {isExpanded && (
                       <div id={panelId} className={styles.apiModels}>
+                        <div className={`${styles.modelRow} ${styles.modelRowHeader}`}>
+                          <span>{t('usage_stats.model_name')}</span>
+                          <span className={styles.modelStat}>{t('usage_stats.requests_count')}</span>
+                          <span className={styles.modelStat}>{t('usage_stats.tokens_count')}</span>
+                          <span className={styles.modelStat}>{t('usage_stats.input_tokens')}</span>
+                          <span className={styles.modelStat}>{t('usage_stats.cached_tokens')}</span>
+                          <span className={styles.modelStat}>{t('usage_stats.output_tokens')}</span>
+                          <span className={styles.modelStat}>
+                            {t('usage_stats.reasoning_tokens')}
+                          </span>
+                        </div>
                         {Object.entries(api.models).map(([model, stats]) => (
                           <div key={model} className={styles.modelRow}>
                             <span className={styles.modelName}>{model}</span>
@@ -134,12 +165,32 @@ export function ApiDetailsCard({ apiStats, loading, hasPrices }: ApiDetailsCardP
                               <span className={styles.requestCountCell}>
                                 <span>{stats.requests.toLocaleString()}</span>
                                 <span className={styles.requestBreakdown}>
-                                  (<span className={styles.statSuccess}>{stats.successCount.toLocaleString()}</span>{' '}
-                                  <span className={styles.statFailure}>{stats.failureCount.toLocaleString()}</span>)
+                                  (
+                                  <span className={styles.statSuccess}>
+                                    {stats.successCount.toLocaleString()}
+                                  </span>{' '}
+                                  <span className={styles.statFailure}>
+                                    {stats.failureCount.toLocaleString()}
+                                  </span>
+                                  )
                                 </span>
                               </span>
                             </span>
-                            <span className={styles.modelStat}>{formatCompactNumber(stats.tokens)}</span>
+                            <span className={styles.modelStat}>
+                              {formatCompactNumber(stats.tokens)}
+                            </span>
+                            <span className={styles.modelStat}>
+                              {formatCompactNumber(stats.inputTokens)}
+                            </span>
+                            <span className={styles.modelStat}>
+                              {formatCompactNumber(stats.cachedTokens)}
+                            </span>
+                            <span className={styles.modelStat}>
+                              {formatCompactNumber(stats.outputTokens)}
+                            </span>
+                            <span className={styles.modelStat}>
+                              {formatCompactNumber(stats.reasoningTokens)}
+                            </span>
                           </div>
                         ))}
                       </div>

@@ -89,6 +89,20 @@ export interface UsageDetailWithEndpoint extends UsageDetail {
   __timestampMs: number;
 }
 
+export interface UsageTokenTotals {
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+}
+
+export interface ApiModelStats extends UsageTokenTotals {
+  requests: number;
+  successCount: number;
+  failureCount: number;
+  tokens: number;
+}
+
 export interface ApiStats {
   endpoint: string;
   totalRequests: number;
@@ -96,13 +110,14 @@ export interface ApiStats {
   failureCount: number;
   totalTokens: number;
   totalCost: number;
-  models: Record<
-    string,
-    { requests: number; successCount: number; failureCount: number; tokens: number }
-  >;
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  models: Record<string, ApiModelStats>;
 }
 
-export interface ModelStatsSummary {
+export interface ModelStatsSummary extends UsageTokenTotals {
   model: string;
   requests: number;
   successCount: number;
@@ -752,6 +767,40 @@ export function extractTotalTokens(detail: unknown): number {
   return inputTokens + outputTokens + reasoningTokens + cachedTokens;
 }
 
+const createUsageTokenTotals = (): UsageTokenTotals => ({
+  inputTokens: 0,
+  cachedTokens: 0,
+  outputTokens: 0,
+  reasoningTokens: 0,
+});
+
+const extractUsageTokenTotals = (detail: unknown): UsageTokenTotals => {
+  const record = isRecord(detail) ? detail : null;
+  const tokensRaw = record?.tokens;
+  const tokens = isRecord(tokensRaw) ? tokensRaw : {};
+
+  return {
+    inputTokens: Math.max(typeof tokens.input_tokens === 'number' ? tokens.input_tokens : 0, 0),
+    cachedTokens: Math.max(
+      typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
+      typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
+    ),
+    outputTokens: Math.max(typeof tokens.output_tokens === 'number' ? tokens.output_tokens : 0, 0),
+    reasoningTokens: Math.max(
+      typeof tokens.reasoning_tokens === 'number' ? tokens.reasoning_tokens : 0,
+      0
+    ),
+  };
+};
+
+const addUsageTokenTotals = (target: UsageTokenTotals, detail: unknown): void => {
+  const totals = extractUsageTokenTotals(detail);
+  target.inputTokens += totals.inputTokens;
+  target.cachedTokens += totals.cachedTokens;
+  target.outputTokens += totals.outputTokens;
+  target.reasoningTokens += totals.reasoningTokens;
+};
+
 /**
  * 计算耗时统计
  */
@@ -998,13 +1047,11 @@ export function getApiStats(
 
   Object.entries(apis).forEach(([endpoint, apiData]) => {
     if (!isRecord(apiData)) return;
-    const models: Record<
-      string,
-      { requests: number; successCount: number; failureCount: number; tokens: number }
-    > = {};
+    const models: Record<string, ApiModelStats> = {};
     let derivedSuccessCount = 0;
     let derivedFailureCount = 0;
     let totalCost = 0;
+    const apiTokenTotals = createUsageTokenTotals();
 
     const modelsData = isRecord(apiData.models) ? apiData.models : {};
     Object.entries(modelsData).forEach(([modelName, modelData]) => {
@@ -1020,10 +1067,13 @@ export function getApiStats(
         failureCount += Number(modelData.failure_count) || 0;
       }
 
+      const modelTokenTotals = createUsageTokenTotals();
       const price = modelPrices[modelName];
-      if (details.length > 0 && (!hasExplicitCounts || price)) {
+      if (details.length > 0) {
         details.forEach((detail) => {
           const detailRecord = isRecord(detail) ? detail : null;
+          addUsageTokenTotals(modelTokenTotals, detailRecord);
+
           if (!hasExplicitCounts) {
             if (detailRecord?.failed === true) {
               failureCount += 1;
@@ -1040,12 +1090,17 @@ export function getApiStats(
           }
         });
       }
+      apiTokenTotals.inputTokens += modelTokenTotals.inputTokens;
+      apiTokenTotals.cachedTokens += modelTokenTotals.cachedTokens;
+      apiTokenTotals.outputTokens += modelTokenTotals.outputTokens;
+      apiTokenTotals.reasoningTokens += modelTokenTotals.reasoningTokens;
 
       models[modelName] = {
         requests: Number(modelData.total_requests) || 0,
         successCount,
         failureCount,
         tokens: Number(modelData.total_tokens) || 0,
+        ...modelTokenTotals,
       };
       derivedSuccessCount += successCount;
       derivedFailureCount += failureCount;
@@ -1067,6 +1122,7 @@ export function getApiStats(
       failureCount,
       totalTokens: Number(apiData.total_tokens) || 0,
       totalCost,
+      ...apiTokenTotals,
       models,
     });
   });
@@ -1091,6 +1147,10 @@ export function getModelStats(
       successCount: number;
       failureCount: number;
       tokens: number;
+      inputTokens: number;
+      cachedTokens: number;
+      outputTokens: number;
+      reasoningTokens: number;
       cost: number;
       latency: LatencyAccumulator;
     }
@@ -1109,6 +1169,10 @@ export function getModelStats(
         successCount: 0,
         failureCount: 0,
         tokens: 0,
+        inputTokens: 0,
+        cachedTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
         cost: 0,
         latency: createLatencyAccumulator(),
       };
@@ -1130,6 +1194,12 @@ export function getModelStats(
         details.forEach((detail) => {
           const detailRecord = isRecord(detail) ? detail : null;
           const latencyMs = extractLatencyMs(detailRecord);
+          const tokenTotals = extractUsageTokenTotals(detailRecord);
+          existing.inputTokens += tokenTotals.inputTokens;
+          existing.cachedTokens += tokenTotals.cachedTokens;
+          existing.outputTokens += tokenTotals.outputTokens;
+          existing.reasoningTokens += tokenTotals.reasoningTokens;
+
           if (!hasExplicitCounts) {
             if (detailRecord?.failed === true) {
               existing.failureCount += 1;
@@ -1161,6 +1231,10 @@ export function getModelStats(
         successCount: stats.successCount,
         failureCount: stats.failureCount,
         tokens: stats.tokens,
+        inputTokens: stats.inputTokens,
+        cachedTokens: stats.cachedTokens,
+        outputTokens: stats.outputTokens,
+        reasoningTokens: stats.reasoningTokens,
         cost: stats.cost,
         averageLatencyMs: latencyStats.averageMs,
         latencySampleCount: latencyStats.sampleCount,

@@ -471,7 +471,7 @@
 
 .modelRow {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(180px, 1fr) repeat(6, auto);
   gap: 10px;
   padding: 8px 10px;
   background-color: var(--bg-primary);
@@ -483,6 +483,14 @@
     grid-template-columns: 1fr;
     gap: 3px;
   }
+}
+
+.modelRowHeader {
+  color: var(--text-tertiary);
+  background-color: var(--bg-secondary);
+  border-color: transparent;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .modelName {

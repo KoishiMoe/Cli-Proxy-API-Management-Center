@@ -22,6 +22,10 @@ type SortKey =
   | 'model'
   | 'requests'
   | 'tokens'
+  | 'inputTokens'
+  | 'cachedTokens'
+  | 'outputTokens'
+  | 'reasoningTokens'
   | 'cost'
   | 'successRate'
   | 'averageLatencyMs';
@@ -117,6 +121,46 @@ export function ModelStatsCard({ modelStats, loading, hasPrices }: ModelStatsCar
                         {arrow('tokens')}
                       </button>
                     </th>
+                    <th className={styles.sortableHeader} aria-sort={ariaSort('inputTokens')}>
+                      <button
+                        type="button"
+                        className={styles.sortHeaderButton}
+                        onClick={() => handleSort('inputTokens')}
+                      >
+                        {t('usage_stats.input_tokens')}
+                        {arrow('inputTokens')}
+                      </button>
+                    </th>
+                    <th className={styles.sortableHeader} aria-sort={ariaSort('cachedTokens')}>
+                      <button
+                        type="button"
+                        className={styles.sortHeaderButton}
+                        onClick={() => handleSort('cachedTokens')}
+                      >
+                        {t('usage_stats.cached_tokens')}
+                        {arrow('cachedTokens')}
+                      </button>
+                    </th>
+                    <th className={styles.sortableHeader} aria-sort={ariaSort('outputTokens')}>
+                      <button
+                        type="button"
+                        className={styles.sortHeaderButton}
+                        onClick={() => handleSort('outputTokens')}
+                      >
+                        {t('usage_stats.output_tokens')}
+                        {arrow('outputTokens')}
+                      </button>
+                    </th>
+                    <th className={styles.sortableHeader} aria-sort={ariaSort('reasoningTokens')}>
+                      <button
+                        type="button"
+                        className={styles.sortHeaderButton}
+                        onClick={() => handleSort('reasoningTokens')}
+                      >
+                        {t('usage_stats.reasoning_tokens')}
+                        {arrow('reasoningTokens')}
+                      </button>
+                    </th>
                     <th className={styles.sortableHeader} aria-sort={ariaSort('averageLatencyMs')}>
                       <button
                         type="button"
@@ -172,6 +216,10 @@ export function ModelStatsCard({ modelStats, loading, hasPrices }: ModelStatsCar
                         </span>
                       </td>
                       <td>{formatCompactNumber(stat.tokens)}</td>
+                      <td>{formatCompactNumber(stat.inputTokens)}</td>
+                      <td>{formatCompactNumber(stat.cachedTokens)}</td>
+                      <td>{formatCompactNumber(stat.outputTokens)}</td>
+                      <td>{formatCompactNumber(stat.reasoningTokens)}</td>
                       <td className={styles.durationCell}>
                         {formatDurationMs(stat.averageLatencyMs)}
                       </td>
